@@ -21,26 +21,15 @@ def get_weight_data(garmin_client: GarminClient, days: int = 30) -> list[dict]:
         print(f"Fetching weight data from {start_date} to {end_date}")
         response = garmin_client.get_body_composition(start_date, end_date)
         
-        print(f"API Response structure: {json.dumps(response, indent=2, default=str)}")
-        
-        # The API response structure varies - check different possible keys
+        # The API returns a dict with "dateWeightList" containing the daily entries
         if isinstance(response, dict):
-            # Try different possible keys for weight list
-            weight_list = (
-                response.get("weightList", []) or
-                response.get("weight", []) or
-                response.get("bodyWeightList", []) or
-                []
-            )
+            weight_list = response.get("dateWeightList", [])
             
             if weight_list:
                 print(f"Found {len(weight_list)} weight entries")
                 return weight_list
             
-            # If no list found, check if the response itself contains weight data
-            if response.get("totalAverage"):
-                print("Response contains totalAverage but no weight list")
-            
+            print("No weight entries found in dateWeightList")
             return []
         
         return []
@@ -54,15 +43,20 @@ def get_weight_data(garmin_client: GarminClient, days: int = 30) -> list[dict]:
 def format_weight_entry(entry: dict) -> dict:
     """
     Format a raw Garmin weight entry into a structured format.
+    Garmin returns weight/muscle/bone in grams, so convert to kg.
     """
+    weight_grams = entry.get("weight")
+    muscle_grams = entry.get("muscleMass")
+    bone_grams = entry.get("boneMass")
+    
     return {
-        "date": entry.get("date"),
-        "weight_kg": entry.get("weight"),
+        "date": entry.get("calendarDate"),
+        "weight_kg": round(weight_grams / 1000, 2) if weight_grams else None,
         "bmi": entry.get("bmi"),
-        "body_fat_percent": entry.get("bodyFatPercent"),
-        "muscle_mass_kg": entry.get("muscleMass"),
-        "bone_mass_kg": entry.get("boneMass"),
-        "water_percent": entry.get("waterPercent"),
+        "body_fat_percent": entry.get("bodyFat"),  # Already in percentage
+        "muscle_mass_kg": round(muscle_grams / 1000, 2) if muscle_grams else None,
+        "bone_mass_kg": round(bone_grams / 1000, 2) if bone_grams else None,
+        "water_percent": entry.get("bodyWater"),  # Already in percentage
     }
 
 
@@ -98,22 +92,22 @@ def weight_entry_needs_update(existing: dict, new_data: dict) -> bool:
     ]
     
     # Optional fields that may or may not exist
-    if new_data["body_fat_percent"] is not None:
+    if new_data["body_fat_percent"] is not None and new_data["body_fat_percent"] > 0:
         checks.append(
             props.get("Body Fat %", {}).get("number") != new_data["body_fat_percent"]
         )
     
-    if new_data["muscle_mass_kg"] is not None:
+    if new_data["muscle_mass_kg"] is not None and new_data["muscle_mass_kg"] > 0:
         checks.append(
             props.get("Muscle Mass (kg)", {}).get("number") != new_data["muscle_mass_kg"]
         )
     
-    if new_data["bone_mass_kg"] is not None:
+    if new_data["bone_mass_kg"] is not None and new_data["bone_mass_kg"] > 0:
         checks.append(
             props.get("Bone Mass (kg)", {}).get("number") != new_data["bone_mass_kg"]
         )
     
-    if new_data["water_percent"] is not None:
+    if new_data["water_percent"] is not None and new_data["water_percent"] > 0:
         checks.append(
             props.get("Water %", {}).get("number") != new_data["water_percent"]
         )
@@ -135,17 +129,17 @@ def create_weight_entry(
         "BMI": {"number": data["bmi"]},
     }
     
-    # Add optional fields if they have values
-    if data["body_fat_percent"] is not None:
+    # Add optional fields if they have values (exclude 0 values which indicate missing data)
+    if data["body_fat_percent"] is not None and data["body_fat_percent"] > 0:
         properties["Body Fat %"] = {"number": round(data["body_fat_percent"], 1)}
     
-    if data["muscle_mass_kg"] is not None:
-        properties["Muscle Mass (kg)"] = {"number": round(data["muscle_mass_kg"], 2)}
+    if data["muscle_mass_kg"] is not None and data["muscle_mass_kg"] > 0:
+        properties["Muscle Mass (kg)"] = {"number": data["muscle_mass_kg"]}
     
-    if data["bone_mass_kg"] is not None:
-        properties["Bone Mass (kg)"] = {"number": round(data["bone_mass_kg"], 2)}
+    if data["bone_mass_kg"] is not None and data["bone_mass_kg"] > 0:
+        properties["Bone Mass (kg)"] = {"number": data["bone_mass_kg"]}
     
-    if data["water_percent"] is not None:
+    if data["water_percent"] is not None and data["water_percent"] > 0:
         properties["Water %"] = {"number": round(data["water_percent"], 1)}
     
     try:
@@ -172,17 +166,17 @@ def update_weight_entry(
         "BMI": {"number": new_data["bmi"]},
     }
     
-    # Add optional fields if they have values
-    if new_data["body_fat_percent"] is not None:
+    # Add optional fields if they have values (exclude 0 values which indicate missing data)
+    if new_data["body_fat_percent"] is not None and new_data["body_fat_percent"] > 0:
         properties["Body Fat %"] = {"number": round(new_data["body_fat_percent"], 1)}
     
-    if new_data["muscle_mass_kg"] is not None:
-        properties["Muscle Mass (kg)"] = {"number": round(new_data["muscle_mass_kg"], 2)}
+    if new_data["muscle_mass_kg"] is not None and new_data["muscle_mass_kg"] > 0:
+        properties["Muscle Mass (kg)"] = {"number": new_data["muscle_mass_kg"]}
     
-    if new_data["bone_mass_kg"] is not None:
-        properties["Bone Mass (kg)"] = {"number": round(new_data["bone_mass_kg"], 2)}
+    if new_data["bone_mass_kg"] is not None and new_data["bone_mass_kg"] > 0:
+        properties["Bone Mass (kg)"] = {"number": new_data["bone_mass_kg"]}
     
-    if new_data["water_percent"] is not None:
+    if new_data["water_percent"] is not None and new_data["water_percent"] > 0:
         properties["Water %"] = {"number": round(new_data["water_percent"], 1)}
     
     try:
@@ -215,7 +209,7 @@ def main():
         formatted_entry = format_weight_entry(entry)
         
         # Skip entries with missing critical data
-        if formatted_entry["weight_kg"] is None or formatted_entry["bmi"] is None:
+        if formatted_entry["weight_kg"] is None or formatted_entry["bmi"] is None or formatted_entry["bmi"] == 0:
             print(f"Skipping entry for {formatted_entry['date']} - missing critical data")
             continue
         
