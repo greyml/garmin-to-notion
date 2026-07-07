@@ -1,4 +1,5 @@
 from datetime import datetime, UTC, timedelta
+import json
 
 from dotenv import load_dotenv
 from garminconnect import Garmin as GarminClient
@@ -17,21 +18,36 @@ def get_weight_data(garmin_client: GarminClient, days: int = 30) -> list[dict]:
         end_date = datetime.now().strftime("%Y-%m-%d")
         start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
         
+        print(f"Fetching weight data from {start_date} to {end_date}")
         response = garmin_client.get_body_composition(start_date, end_date)
         
-        # The API returns a dict with "totalAverage" and potentially a list of daily entries
-        # Check if there's a list of weight entries (varies by API response)
+        print(f"API Response structure: {json.dumps(response, indent=2, default=str)}")
+        
+        # The API response structure varies - check different possible keys
         if isinstance(response, dict):
-            # Try to get weight list if available
-            weight_list = response.get("weightList", [])
+            # Try different possible keys for weight list
+            weight_list = (
+                response.get("weightList", []) or
+                response.get("weight", []) or
+                response.get("bodyWeightList", []) or
+                []
+            )
+            
             if weight_list:
+                print(f"Found {len(weight_list)} weight entries")
                 return weight_list
-            # Otherwise return empty list (no weight data in this range)
+            
+            # If no list found, check if the response itself contains weight data
+            if response.get("totalAverage"):
+                print("Response contains totalAverage but no weight list")
+            
             return []
         
         return []
     except Exception as e:
         print(f"Error fetching weight data: {e}")
+        import traceback
+        traceback.print_exc()
         return []
 
 
