@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 from garminconnect import Garmin as GarminClient
 from notion_client import Client as NotionClient
 
+from src.helpers import get_garmin_client, get_notion_client
+
 
 def format_activity_type(activity_type: str, activity_name: str = "") -> tuple[str, str]:
     formatted_type = activity_type.replace('_', ' ').title() if activity_type else "Unknown"
