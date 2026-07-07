@@ -192,17 +192,15 @@ def update_exercise_entry(notion_client: NotionClient, existing: dict, new_data:
 def main():
     load_dotenv()
 
-    garmin_email = os.getenv("GARMIN_EMAIL")
-    garmin_password = os.getenv("GARMIN_PASSWORD")
-    notion_token = os.getenv("NOTION_TOKEN")
-    db_id = os.getenv("NOTION_STRENGTH_DB_ID")
-    fetch_limit = int(os.getenv("GARMIN_ACTIVITIES_FETCH_LIMIT") or "1000")
 
-    garmin_client = GarminClient(garmin_email, garmin_password)
-    garmin_client.login()
-    notion_client = NotionClient(auth=notion_token)
+    # Initialize Garmin and Notion clients using environment variables
+    garmin_client, garmin_configuration = get_garmin_client()
+    notion_client, notion_dbs = get_notion_client()
 
-    strength_activities = get_strength_activities(garmin_client, fetch_limit)
+    database_id = notion_dbs.activities
+
+    # Get all activities
+    strength_activities = get_strength_activities(garmin_client, garmin_configuration.activity_fetch_limit)
 
     for activity in strength_activities:
         activity_id = activity.get("activityId")
