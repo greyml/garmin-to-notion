@@ -10,14 +10,26 @@ from src.helpers import get_garmin_client, get_notion_client
 def get_weight_data(garmin_client: GarminClient, days: int = 30) -> list[dict]:
     """
     Get weight data from Garmin for the last n days.
+    Returns a list of daily weight entries.
     """
     try:
         # Calculate date range
         end_date = datetime.now().strftime("%Y-%m-%d")
         start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
         
-        weight_data = garmin_client.get_body_composition(start_date, end_date)
-        return weight_data if weight_data else []
+        response = garmin_client.get_body_composition(start_date, end_date)
+        
+        # The API returns a dict with "totalAverage" and potentially a list of daily entries
+        # Check if there's a list of weight entries (varies by API response)
+        if isinstance(response, dict):
+            # Try to get weight list if available
+            weight_list = response.get("weightList", [])
+            if weight_list:
+                return weight_list
+            # Otherwise return empty list (no weight data in this range)
+            return []
+        
+        return []
     except Exception as e:
         print(f"Error fetching weight data: {e}")
         return []
@@ -178,6 +190,10 @@ def main():
 
     # Get weight data from the last 30 days
     weight_entries = get_weight_data(garmin_client, days=30)
+
+    if not weight_entries:
+        print("No weight data found for the last 30 days")
+        return
 
     for entry in weight_entries:
         formatted_entry = format_weight_entry(entry)
