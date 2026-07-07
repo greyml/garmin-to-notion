@@ -1,4 +1,3 @@
-import os
 from datetime import datetime, UTC, timedelta
 
 from dotenv import load_dotenv
@@ -197,7 +196,7 @@ def main():
     garmin_client, garmin_configuration = get_garmin_client()
     notion_client, notion_dbs = get_notion_client()
 
-    database_id = notion_dbs.activities
+    db_id = notion_dbs.strength
 
     # Get all activities
     strength_activities = get_strength_activities(garmin_client, garmin_configuration.activity_fetch_limit)
