@@ -1,4 +1,4 @@
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 
 from dotenv import load_dotenv
 from garminconnect import Garmin as GarminClient
@@ -12,7 +12,11 @@ def get_weight_data(garmin_client: GarminClient, days: int = 30) -> list[dict]:
     Get weight data from Garmin for the last n days.
     """
     try:
-        weight_data = garmin_client.get_body_composition(days)
+        # Calculate date range
+        end_date = datetime.now().strftime("%Y-%m-%d")
+        start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+        
+        weight_data = garmin_client.get_body_composition(start_date, end_date)
         return weight_data if weight_data else []
     except Exception as e:
         print(f"Error fetching weight data: {e}")
