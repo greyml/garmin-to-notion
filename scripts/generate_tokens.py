@@ -10,6 +10,7 @@ Outputs a JSON token string to stdout for setting as the GARMIN_AUTH_TOKEN GitHu
 import json
 import os
 import sys
+import pathlib
 
 from garminconnect import Garmin, GarminConnectAuthenticationError
 
@@ -23,11 +24,11 @@ if not email or not password:
 try:
     print(f"Logging in as {email}...", file=sys.stderr)
     garmin = Garmin(email, password)
-    garmin.login()
+    garmin.login("~/.garminconnect")
     print("Login successful!", file=sys.stderr)
 
     # Get the token as JSON string
-    token_str = garmin.garth.dumps()
+    token_str = pathlib.Path.home().joinpath(".garminconnect", "garmin_tokens.json").read_text()
     
     # Verify it's valid JSON
     try:
