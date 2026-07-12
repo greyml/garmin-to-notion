@@ -14,12 +14,8 @@ env:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-      issues: write
-      actions: read
-      
+    permissions: write-all
+    
     steps:
       - uses: actions/checkout@v6
 
