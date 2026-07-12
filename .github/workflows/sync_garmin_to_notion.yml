@@ -34,12 +34,18 @@ jobs:
           NOTION_SLEEP_DB_ID: ${{ secrets.NOTION_SLEEP_DB_ID }}
           NOTION_STRENGTH_DB_ID: ${{ secrets.NOTION_STRENGTH_DB_ID }}
           NOTION_WEIGHT_DB_ID: ${{ secrets.NOTION_WEIGHT_DB_ID }}
-          GARMIN_ACTIVITIES_FETCH_LIMIT: ${{ inputs.GARMIN_ACTIVITIES_FETCH_LIMIT || '10' }}
+          GARMIN_ACTIVITIES_FETCH_LIMIT: ${{ inputs.GARMIN_ACTIVITIES_FETCH_LIMIT || '40' }}
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+          
           TZ: 'America/Toronto'
         run: |
+          TOKEN=$(uv run python scripts/generate_tokens.py)
+          gh secret set GARMIN_AUTH_TOKEN --body "$TOKEN" --repo ${{ github.repository }}
           uv run python -m src.workflows.garmin-activities
           uv run python -m src.workflows.personal-records
           uv run python -m src.workflows.daily-steps
           uv run python -m src.workflows.sleep-data
           uv run python -m src.workflows.strength-tracking
           uv run python -m src.workflows.weight-tracking
+
